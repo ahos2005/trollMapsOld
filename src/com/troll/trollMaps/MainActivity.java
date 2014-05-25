@@ -83,11 +83,8 @@ public class MainActivity extends FragmentActivity implements
 	protected String latitude,longitude; 
 	protected boolean gps_enabled,network_enabled;
 	GMapDirection mapDirections;
-	
-	
 	@SuppressLint("NewApi")
-	 
-
+	
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
@@ -95,10 +92,10 @@ public class MainActivity extends FragmentActivity implements
 		map = ((MapFragment) getFragmentManager().findFragmentById(R.id.map)).getMap();
 		map.setMyLocationEnabled(true);	//Turns on the location layer
 
-		//		map.setOnMyLocationButtonClickListener(listener);
 //		map.setOnMarkerClickListener(OnMarkerClickListener);
+
 //		map.getUiSettings().setMyLocationButtonEnabled(true);// not showing button
-//		map.getUiSettings().setZoomControlsEnabled(false);
+//		map.getUiSettings().setZoomControlsEnabled(false);	//turns off zoom
 
 //		map.setMapType(GoogleMap.MAP_TYPE_NORMAL);
 		map.setMapType(GoogleMap.MAP_TYPE_HYBRID);
@@ -129,10 +126,14 @@ public class MainActivity extends FragmentActivity implements
         // Set the fastest update interval to 1 second
         mLocationRequest.setFastestInterval(FASTEST_INTERVAL);
 
+        //this is for testing purposes:
+//        mLocationClient.requestLocationUpdates(mLocationRequest, 
+//        (com.google.android.gms.location.LocationListener) this);
+
 //        mCurrentLocation = mLocationClient.getLastLocation();	//first time: get current location
 		
-		locationManager = (LocationManager) getSystemService(Context.LOCATION_SERVICE);
-		locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, 0, 0, this);
+//		locationManager = (LocationManager) getSystemService(Context.LOCATION_SERVICE);
+//		locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, 0, 0, this);
 		
 		LatLng UCSD = new LatLng(32.881271, -117.2389000);//879271,2289000
 		LatLng Center = new LatLng(32.878053, -117.237218);
@@ -177,21 +178,21 @@ public class MainActivity extends FragmentActivity implements
 			StrictMode.setThreadPolicy(policy);
 		}
 		
-		mapDirections = new GMapDirection();
-		myLatLng = UCSD;//**
-		Document doc = mapDirections.getDocument(myLatLng, Warren, MODE_WALKING);
-		int duration = mapDirections.getDurationValue(doc);
-		String distance = mapDirections.getDistanceText(doc);
-		String start_address = mapDirections.getStartAddress(doc);
-		String copy_right = mapDirections.getCopyRights(doc);
-		ArrayList<LatLng> directionPoint = mapDirections.getDirection(doc);
-		PolylineOptions rectLine = new PolylineOptions().width(3).color(Color.RED);
-		for(int i=0, _i=directionPoint.size();i<_i;++i)
-		{
-			/*For shits and giggles */
-			rectLine.add(directionPoint.get(i));
-		}
-		map.addPolyline(rectLine);
+//		mapDirections = new GMapDirection();
+//		myLatLng = UCSD;//**
+//		Document doc = mapDirections.getDocument(myLatLng, Warren, MODE_WALKING);
+//		int duration = mapDirections.getDurationValue(doc);
+//		String distance = mapDirections.getDistanceText(doc);
+//		String start_address = mapDirections.getStartAddress(doc);
+//		String copy_right = mapDirections.getCopyRights(doc);
+//		ArrayList<LatLng> directionPoint = mapDirections.getDirection(doc);
+//		PolylineOptions rectLine = new PolylineOptions().width(3).color(Color.RED);
+//		for(int i=0, _i=directionPoint.size();i<_i;++i)
+//		{
+//			/*For shits and giggles */
+//			rectLine.add(directionPoint.get(i));
+//		}
+//		map.addPolyline(rectLine);
 		
 		if (savedInstanceState == null) {
 			getSupportFragmentManager().beginTransaction()
@@ -299,8 +300,8 @@ public class MainActivity extends FragmentActivity implements
 	@Override
 	public void onLocationChanged(Location location) {
 		// TODO Auto-generated method stub
-    	myLatitude = (location.getLatitude());
-    	myLongitude = (location.getLongitude());
+    	myLatitude = mCurrentLocation.getLatitude();//(location.getLatitude());
+    	myLongitude = mCurrentLocation.getLongitude();//(location.getLongitude());
 //    	LatLng prevLatLng = new LatLng(myLatLng.latitude, myLatLng.longitude);
 //    	myBearing = myMath.atan2(myMath.cos(myLatLng.latitude)*myMath.sin(myLatitude)
 //    			-myMath.sin(myLatLng.latitude)*myMath.cos(myLatitude)
