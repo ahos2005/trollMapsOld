@@ -6,6 +6,8 @@ import org.w3c.dom.Document;
 
 import android.annotation.SuppressLint;//**
 import android.content.Context;
+import android.content.SharedPreferences;
+import android.content.SharedPreferences.Editor;
 import android.graphics.Color;
 import android.location.Location;
 import android.location.LocationListener;
@@ -60,6 +62,8 @@ public class MainActivity extends FragmentActivity implements
             MILLISECONDS_PER_SECOND * FASTEST_INTERVAL_IN_SECONDS;
     LocationRequest mLocationRequest;
     boolean mUpdatesRequested;
+    SharedPreferences mPrefs;
+    Editor mEditor;
 	
 	int currentMapZoom;
 	LatLng myLatLng; // current position coordinates
@@ -102,9 +106,20 @@ public class MainActivity extends FragmentActivity implements
 //		map.setMapType(GoogleMap.MAP_TYPE_SATELLITE);
 //		map.setMapType(GoogleMap.MAP_TYPE_TERRAIN);
 		
-		mLocationClient = new LocationClient(this, this, this);
-//		mCurrentLocation = mLocationClient.getLastLocation();	//first time: get current location
-        // Create the LocationRequest object
+		// Open the shared preferences
+        mPrefs = getSharedPreferences("SharedPreferences",
+                Context.MODE_PRIVATE);
+        // Get a SharedPreferences editor
+        mEditor = mPrefs.edit();
+        /*
+         * Create a new location client, using the enclosing class to
+         * handle callbacks.
+         */
+        mLocationClient = new LocationClient(this, this, this);
+        // Start with updates turned off
+        mUpdatesRequested = false;
+		
+		// Create the LocationRequest object
         mLocationRequest = LocationRequest.create();
         // Use high accuracy
         mLocationRequest.setPriority(
@@ -114,7 +129,7 @@ public class MainActivity extends FragmentActivity implements
         // Set the fastest update interval to 1 second
         mLocationRequest.setFastestInterval(FASTEST_INTERVAL);
 
-        
+//        mCurrentLocation = mLocationClient.getLastLocation();	//first time: get current location
 		
 		locationManager = (LocationManager) getSystemService(Context.LOCATION_SERVICE);
 		locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, 0, 0, this);
@@ -224,22 +239,62 @@ public class MainActivity extends FragmentActivity implements
 	/*
      * Called when the Activity becomes visible.
      */
-//    @Override
-//    protected void onStart() {
-//        super.onStart();
-//        // Connect the client.
-//        mLocationClient.connect();
-//    }
-//    
-//    /*
-//     * Called when the Activity is no longer visible.
-//     */
-//    @Override
-//    protected void onStop() {
-//        // Disconnecting the client invalidates it.
-//        super.onStop();
-//        mLocationClient.disconnect();
-//    }
+    @Override
+    protected void onStart() {
+        super.onStart();
+        // Connect the client.
+        mLocationClient.connect();
+    }
+    
+    /*
+     * Called when the Activity is no longer visible.
+     */
+    @Override
+    protected void onStop() {
+        // Disconnecting the client invalidates it.
+        // If the client is connected
+        if (mLocationClient.isConnected()) {
+            /*
+             * Remove location updates for a listener.
+             * The current Activity is the listener, so
+             * the argument is "this".
+             */
+            mLocationClient.removeLocationUpdates(
+            		(com.google.android.gms.location.LocationListener)this);
+        }
+        /*
+         * After disconnect() is called, the client is
+         * considered "dead".
+         */
+        mLocationClient.disconnect();
+        super.onStop();
+    }
+    
+    @Override
+    protected void onPause() {
+        // Save the current setting for updates
+        mEditor.putBoolean("KEY_UPDATES_ON", mUpdatesRequested);
+        mEditor.commit();
+        super.onPause();
+    }
+    
+    @Override
+    protected void onResume() {
+        /*
+         * Get any previous setting for location updates
+         * Gets "false" if an error occurs
+         */
+        super.onResume();
+    	if (mPrefs.contains("KEY_UPDATES_ON")) {
+            mUpdatesRequested =
+                    mPrefs.getBoolean("KEY_UPDATES_ON", false);
+        
+        // Otherwise, turn off location updates
+        } else {
+            mEditor.putBoolean("KEY_UPDATES_ON", false);
+            mEditor.commit();
+        } 
+    }
 
 	@Override
 	public void onLocationChanged(Location location) {
@@ -254,10 +309,10 @@ public class MainActivity extends FragmentActivity implements
 //    	ATAN2(COS(lat1)*SIN(lat2)-SIN(lat1)*COS(lat2)*COS(lon2-lon1), SIN(lon2-lon1)*COS(lat2))
     	myLatLng = new LatLng(myLatitude, myLongitude);
     
-    	myBearing = myBearing - 5;
-    	if(myBearing < 0)
-    		myBearing = 360;
-    	myAngle = myBearing/6;
+//    	myBearing = myBearing - 5;
+//    	if(myBearing < 0)
+//    		myBearing = 360;
+//    	myAngle = myBearing/6;
     	
 //    	map.moveCamera(CameraUpdateFactory.newLatLng(myLatLng));//this was for testing the GPS
 //    	map.ani
@@ -312,13 +367,25 @@ public class MainActivity extends FragmentActivity implements
 
 	}
 
+    /*
+     * Called by Location Services when the request to connect the
+     * client finishes successfully. At this point, you can
+     * request the current location or start periodic updates
+     */
 	@Override
 	public void onConnected(Bundle connectionHint) {
         // Display the connection status
         Toast.makeText(this, "Connected", Toast.LENGTH_SHORT).show();
-		
+        // If already requested, start periodic updates
+        if (mUpdatesRequested) 
+        {
+            mLocationClient.requestLocationUpdates(mLocationRequest, 
+            (com.google.android.gms.location.LocationListener) this);
+        }
 	}
 
+	
+	
 	@Override
 	public void onDisconnected() {
         // Display the connection status
