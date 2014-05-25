@@ -22,6 +22,7 @@ import android.widget.Toast;
 import com.google.android.gms.common.ConnectionResult;
 import com.google.android.gms.common.GooglePlayServicesClient;
 import com.google.android.gms.location.LocationClient;
+import com.google.android.gms.location.LocationRequest;
 import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;//**
 import com.google.android.gms.maps.MapFragment;
@@ -33,16 +34,33 @@ import com.google.android.gms.maps.model.PolylineOptions;
 import com.hawk.mapsv2demo.R;
 //**
 
-public class MainActivity extends FragmentActivity implements LocationListener,//{
+public class MainActivity extends FragmentActivity implements
 		GooglePlayServicesClient.ConnectionCallbacks,
-        GooglePlayServicesClient.OnConnectionFailedListener{
+        GooglePlayServicesClient.OnConnectionFailedListener,
+        LocationListener{
 
 	ArrayList<Marker> cartMarkers = new ArrayList<Marker>();
 	ArrayList<LatLng> cartLatLongs = new ArrayList<LatLng>();
     double myLatitude, myLongitude;
 	private GoogleMap map;
+	
 	LocationClient mLocationClient;
 	Location mCurrentLocation;
+	// Milliseconds per second
+    private static final int MILLISECONDS_PER_SECOND = 1000;
+    // Update frequency in seconds
+    public static final int UPDATE_INTERVAL_IN_SECONDS = 5;
+    // Update frequency in milliseconds
+    private static final long UPDATE_INTERVAL =
+            MILLISECONDS_PER_SECOND * UPDATE_INTERVAL_IN_SECONDS;
+    // The fastest update frequency, in seconds
+    private static final int FASTEST_INTERVAL_IN_SECONDS = 1;
+    // A fast frequency ceiling in milliseconds
+    private static final long FASTEST_INTERVAL =
+            MILLISECONDS_PER_SECOND * FASTEST_INTERVAL_IN_SECONDS;
+    LocationRequest mLocationRequest;
+    boolean mUpdatesRequested;
+	
 	int currentMapZoom;
 	LatLng myLatLng; // current position coordinates
 	double myBearing;
@@ -71,14 +89,33 @@ public class MainActivity extends FragmentActivity implements LocationListener,/
 		super.onCreate(savedInstanceState);
 		setContentView(R.layout.activity_main);
 		map = ((MapFragment) getFragmentManager().findFragmentById(R.id.map)).getMap();
+		map.setMyLocationEnabled(true);	//Turns on the location layer
+
+		//		map.setOnMyLocationButtonClickListener(listener);
 //		map.setOnMarkerClickListener(OnMarkerClickListener);
-		map.getUiSettings().setMyLocationButtonEnabled(true);// not showing button
+//		map.getUiSettings().setMyLocationButtonEnabled(true);// not showing button
 //		map.getUiSettings().setZoomControlsEnabled(false);
+
 //		map.setMapType(GoogleMap.MAP_TYPE_NORMAL);
 		map.setMapType(GoogleMap.MAP_TYPE_HYBRID);
 //		map.setMapType(GoogleMap.MAP_TYPE_NONE);
 //		map.setMapType(GoogleMap.MAP_TYPE_SATELLITE);
 //		map.setMapType(GoogleMap.MAP_TYPE_TERRAIN);
+		
+		mLocationClient = new LocationClient(this, this, this);
+//		mCurrentLocation = mLocationClient.getLastLocation();	//first time: get current location
+        // Create the LocationRequest object
+        mLocationRequest = LocationRequest.create();
+        // Use high accuracy
+        mLocationRequest.setPriority(
+                LocationRequest.PRIORITY_HIGH_ACCURACY);
+        // Set the update interval to 5 seconds
+        mLocationRequest.setInterval(UPDATE_INTERVAL);
+        // Set the fastest update interval to 1 second
+        mLocationRequest.setFastestInterval(FASTEST_INTERVAL);
+
+        
+		
 		locationManager = (LocationManager) getSystemService(Context.LOCATION_SERVICE);
 		locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, 0, 0, this);
 		
@@ -94,11 +131,14 @@ public class MainActivity extends FragmentActivity implements LocationListener,/
 		cartLatLongs.add(RevellePlaza);
 		cartLatLongs.add(UCSD);
 		currentMapZoom = 16;
+		
+		//query the database for open or closed
+		
 		Marker ucsd = map.addMarker(new MarkerOptions().position(UCSD)
 				.visible(false).title("UCSD"));
 		//Log.d("Main","MO: before warrHallMarker");
 		Marker warrenHallMarker = map.addMarker(new MarkerOptions().position(Warren)
-		        .title("Warren"));
+		        .title("Warren").snippet("Welcome to warren coffee cart"));
 		Marker centerHallMarker = map.addMarker(new MarkerOptions().position(Center)
 		        .title("Center"));
 		Marker socialScienceMarker = map.addMarker(new MarkerOptions().position(socialScience)
@@ -121,6 +161,7 @@ public class MainActivity extends FragmentActivity implements LocationListener,/
 			StrictMode.ThreadPolicy policy = new StrictMode.ThreadPolicy.Builder().permitAll().build();
 			StrictMode.setThreadPolicy(policy);
 		}
+		
 		mapDirections = new GMapDirection();
 		myLatLng = UCSD;//**
 		Document doc = mapDirections.getDocument(myLatLng, Warren, MODE_WALKING);
@@ -196,8 +237,8 @@ public class MainActivity extends FragmentActivity implements LocationListener,/
 //    @Override
 //    protected void onStop() {
 //        // Disconnecting the client invalidates it.
-//        mLocationClient.disconnect();
 //        super.onStop();
+//        mLocationClient.disconnect();
 //    }
 
 	@Override
